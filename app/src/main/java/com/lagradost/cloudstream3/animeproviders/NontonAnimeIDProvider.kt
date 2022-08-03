@@ -3,19 +3,17 @@ package com.lagradost.cloudstream3.animeproviders
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-import java.net.URI
-import java.util.ArrayList
 
 class NontonAnimeIDProvider : MainAPI() {
     override var mainUrl = "https://75.119.159.228"
     override var name = "NontonAnimeID"
     override val hasQuickSearch = false
     override val hasMainPage = true
-    override val lang = "id"
+    override var lang = "id"
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
@@ -42,22 +40,22 @@ class NontonAnimeIDProvider : MainAPI() {
         }
     }
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val document = app.get(mainUrl).document
 
         val homePageList = ArrayList<HomePageList>()
 
         document.select("section#postbaru").forEach { block ->
             val header = block.selectFirst("h2")!!.text().trim()
-            val animes = block.select("article.animeseries").mapNotNull {
+            val animes = block.select("article.animeseries").map {
                 it.toSearchResult()
             }
             if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
         }
 
-        document.select("aside#sidebar_right > div.side:nth-child(2)").forEach { block ->
+        document.select("aside#sidebar_right > div:nth-child(4)").forEach { block ->
             val header = block.selectFirst("h3")!!.ownText().trim()
-            val animes = block.select("li.fullwdth").mapNotNull {
+            val animes = block.select("li.fullwdth").map {
                 it.toSearchResultPopular()
             }
             if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
@@ -70,20 +68,30 @@ class NontonAnimeIDProvider : MainAPI() {
         return if (uri.contains("/anime/")) {
             uri
         } else {
-            val name = Regex("$mainUrl/(.*)-episode.*").find(uri)?.groupValues?.get(1).toString()
-            if (name.contains("movie")) {
-                return "$mainUrl/anime/" + name.replace("-movie", "")
-            } else {
-                if (name.contains("kokurasetai-season-3")) {
-                    "$mainUrl/anime/${name.replace("season-3", "ultra-romantic")}"
-                } else {
-                    "$mainUrl/anime/$name"
-                }
+            var title = uri.substringAfter("$mainUrl/")
+            val fixTitle = Regex("(.*)-episode.*").find(title)?.groupValues?.getOrNull(1).toString()
+            title = when {
+                title.contains("utawarerumono-season-3") -> fixTitle.replace(
+                    "season-3",
+                    "futari-no-hakuoro"
+                )
+                title.contains("kingdom-season-4") -> fixTitle.replace("season-4", "4th-season")
+                title.contains("maou-sama-season-2") -> fixTitle.replace("season-2", "2")
+                title.contains("overlord-season-4") -> fixTitle.replace("season-4", "iv")
+                title.contains("kyoushitsu-e-season-2") -> fixTitle.replace(
+                    "kyoushitsu-e-season-2",
+                    "kyoushitsu-e-tv-2nd-season"
+                )
+                title.contains("season-2") -> fixTitle.replace("season-2", "2nd-season")
+                title.contains("season-3") -> fixTitle.replace("season-3", "3rd-season")
+                title.contains("movie") -> title.substringBefore("-movie")
+                else -> fixTitle
             }
+            "$mainUrl/anime/$title"
         }
     }
 
-    private fun Element.toSearchResult(): SearchResponse {
+    private fun Element.toSearchResult(): AnimeSearchResponse {
         val href = getProperAnimeLink(fixUrl(this.selectFirst("a")!!.attr("href")))
         val title = this.selectFirst("h3.title")!!.text()
         val posterUrl = fixUrl(this.select("img").attr("data-src"))
@@ -95,7 +103,7 @@ class NontonAnimeIDProvider : MainAPI() {
 
     }
 
-    private fun Element.toSearchResultPopular(): SearchResponse {
+    private fun Element.toSearchResultPopular(): AnimeSearchResponse {
         val href = getProperAnimeLink(fixUrl(this.selectFirst("a")!!.attr("href")))
         val title = this.select("h4").text().trim()
         val posterUrl = fixUrl(this.select("img").attr("data-src"))
@@ -149,7 +157,7 @@ class NontonAnimeIDProvider : MainAPI() {
         val type = getType(document.select("span.typeseries").text().trim())
         val rating = document.select("span.nilaiseries").text().trim().toIntOrNull()
         val description = document.select(".entry-content.seriesdesc > p").text().trim()
-        val trailer = document.select("a.ytp-impression-link").attr("href")
+        val trailer = document.selectFirst("iframe#traileryt")?.attr("data-src")
 
         val episodes = if (document.select("button.buttfilter").isNotEmpty()) {
             val id = document.select("input[name=series_id]").attr("value")
@@ -167,16 +175,17 @@ class NontonAnimeIDProvider : MainAPI() {
                     )
                 ).parsed<EpResponse>().content
             ).select("li").map {
-                val engName =
-                    document.selectFirst("div.bottomtitle:nth-child(4) > span:nth-child(1)")
-                        ?.ownText()
-                val name = it.selectFirst("span.t1")!!.text().trim().replace("Episode", "$engName")
-                val link = it.selectFirst("a")!!.attr("href")
+                val name = Regex("(Episode\\s?[0-9]+)").find(
+                    it.selectFirst("a")?.text().toString()
+                )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
+                val link = fixUrl(it.selectFirst("a")!!.attr("href"))
                 Episode(link, name)
             }.reversed()
         } else {
             document.select("ul.misha_posts_wrap2 > li").map {
-                val name = it.select("span.t1").text().trim()
+                val name = Regex("(Episode\\s?[0-9]+)").find(
+                    it.selectFirst("a")?.text().toString()
+                )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = it.select("a").attr("href")
                 Episode(link, name)
             }.reversed()
@@ -219,7 +228,7 @@ class NontonAnimeIDProvider : MainAPI() {
         val document = app.get(data).document
         val sources = ArrayList<String>()
 
-        document.select(".container1 > ul > li").apmap {
+        document.select(".container1 > ul > li:not(.boxtab)").apmap {
             val dataPost = it.attr("data-post")
             val dataNume = it.attr("data-nume")
             val dataType = it.attr("data-type")
@@ -231,14 +240,16 @@ class NontonAnimeIDProvider : MainAPI() {
                     "post" to dataPost,
                     "nume" to dataNume,
                     "type" to dataType
-                )
+                ),
+                referer = data,
+                headers = mapOf("X-Requested-With" to "XMLHttpRequest")
             ).document.select("iframe").attr("src")
 
             sources.add(fixUrl(iframe))
         }
 
         sources.apmap {
-            loadExtractor(it, data, callback)
+            loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
         }
 
         return true

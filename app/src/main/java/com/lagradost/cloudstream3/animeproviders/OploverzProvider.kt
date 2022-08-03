@@ -2,18 +2,18 @@ package com.lagradost.cloudstream3.animeproviders
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.util.ArrayList
 
+
 class OploverzProvider : MainAPI() {
-    override var mainUrl = "https://oploverz.asia"
+    override var mainUrl = "https://65.108.132.145"
     override var name = "Oploverz"
-    override val hasQuickSearch = false
     override val hasMainPage = true
-    override val lang = "id"
+    override var lang = "id"
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
@@ -40,20 +40,21 @@ class OploverzProvider : MainAPI() {
         }
     }
 
-    override suspend fun getMainPage(): HomePageResponse {
-        val document = app.get(mainUrl).document
+    override val mainPage = mainPageOf(
+        "&status=&type=&order=update" to "Episode Terbaru",
+        "&status=&type=&order=latest" to "Anime Terbaru",
+        "&sub=&order=popular" to "Popular Anime",
+    )
 
-        val homePageList = ArrayList<HomePageList>()
-
-        document.select(".bixbox.bbnofrm").forEach { block ->
-            val header = block.selectFirst("h3")!!.text().trim()
-            val animes = block.select("article[itemscope=itemscope]").mapNotNull {
-                it.toSearchResult()
-            }
-            if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
+    override suspend fun getMainPage(
+        page: Int,
+        request: MainPageRequest
+    ): HomePageResponse {
+        val document = app.get("$mainUrl/anime/?page=$page${request.data}").document
+        val home = document.select("article[itemscope=itemscope]").mapNotNull {
+            it.toSearchResult()
         }
-
-        return HomePageResponse(homePageList)
+        return newHomePageResponse(request.name, home)
     }
 
     private fun getProperAnimeLink(uri: String): String {
@@ -67,6 +68,8 @@ class OploverzProvider : MainAPI() {
                     title
                 )?.groupValues?.get(1).toString()
                 (title.contains("-ova")) -> Regex("(.+)-ova").find(title)?.groupValues?.get(1)
+                    .toString()
+                (title.contains("-movie")) -> Regex("(.+)-subtitle").find(title)?.groupValues?.get(1)
                     .toString()
                 else -> Regex("(.+)-subtitle").find(title)?.groupValues?.get(1).toString()
                     .replace(Regex("-\\d+"), "")
@@ -86,18 +89,14 @@ class OploverzProvider : MainAPI() {
 
     }
 
-    private fun Element.toSearchResult(): SearchResponse {
+    private fun Element.toSearchResult(): AnimeSearchResponse? {
         val href = getProperAnimeLink(this.selectFirst("a.tip")!!.attr("href"))
-        val title = this.selectFirst("h2[itemprop=headline]")!!.text().trim()
-        val posterUrl = fixUrl(this.selectFirst("img")!!.attr("src"))
-        val type = getType(this.selectFirst(".eggtype, .typez")!!.text().trim())
-        val epNum =
-            this.selectFirst(".eggepisode, span.epx")!!.text().replace(Regex("[^0-9]"), "").trim()
-                .toIntOrNull()
+        val title = this.selectFirst("h2[itemprop=headline]")?.text()?.trim() ?: return null
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val type = getType(this.selectFirst(".eggtype, .typez")?.text()?.trim().toString())
 
         return newAnimeSearchResponse(title, href, type) {
             this.posterUrl = posterUrl
-            addDubStatus(dubExist = false, subExist = true, subEpisodes = epNum)
         }
     }
 
@@ -106,8 +105,8 @@ class OploverzProvider : MainAPI() {
         val document = app.get(link).document
 
         return document.select("article[itemscope=itemscope]").map {
-            val title = it.selectFirst(".tt")!!.ownText().trim()
-            val poster = it.selectFirst("img")!!.attr("src")
+            val title = it.selectFirst(".tt")?.ownText()?.trim().toString()
+            val poster = fixUrlNull(it.selectFirst("img")?.attr("src"))
             val tvType = getType(it.selectFirst(".typez")?.text().toString())
             val href = fixUrl(it.selectFirst("a.tip")!!.attr("href"))
 
@@ -133,18 +132,20 @@ class OploverzProvider : MainAPI() {
                 .text().trim().replace("Status: ", "")
         )
         val typeCheck =
-            when {
-                document.select(".info-content > .spe > span:nth-child(5), .info-content > .spe > span")
-                    .text().trim().contains("TV") -> "TV"
-                document.select(".info-content > .spe > span:nth-child(5), .info-content > .spe > span")
-                    .text().trim().contains("TV") -> "Movie"
-                else -> "OVA"
+            when (document.select(".info-content > .spe > span:nth-child(5), .info-content > .spe > span")
+                .text().trim()) {
+                "OVA" -> "OVA"
+                "Movie" -> "Movie"
+                else -> "TV"
             }
         val type = getType(typeCheck)
         val description = document.select(".entry-content > p").text().trim()
+        val trailer = document.selectFirst("a.trailerbutton")?.attr("href")
 
         val episodes = document.select(".eplister > ul > li").map {
-            val name = it.select(".epl-title").text().trim()
+            val header = it.select(".epl-title").text()
+            val name =
+                Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
             val link = fixUrl(it.select("a").attr("href"))
             Episode(link, name)
         }.reversed()
@@ -171,6 +172,7 @@ class OploverzProvider : MainAPI() {
             plot = description
             this.tags = tags
             this.recommendations = recommendations
+            addTrailer(trailer)
         }
 
     }
@@ -192,7 +194,7 @@ class OploverzProvider : MainAPI() {
         }
 
         sources.apmap {
-            loadExtractor(it, data, callback)
+            loadExtractor(it, data, subtitleCallback, callback)
         }
 
         return true

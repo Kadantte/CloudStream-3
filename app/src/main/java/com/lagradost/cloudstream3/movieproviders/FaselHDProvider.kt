@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.nodes.Element
 
 class FaselHDProvider : MainAPI() {
-    override val lang = "ar"
+    override var lang = "ar"
     override var mainUrl = "https://faselhd.io"
     override var name = "FaselHD"
     override val usesWebView = false
@@ -35,7 +35,7 @@ class FaselHDProvider : MainAPI() {
         )
     }
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         // Title, Url
         val moviesUrl = listOf(
             Pair("Movies", "$mainUrl/all-movies/page/"+(0..10).random()),

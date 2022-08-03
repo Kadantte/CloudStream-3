@@ -23,16 +23,15 @@ class DoramasYTProvider : MainAPI() {
 
     override var mainUrl = "https://doramasyt.com"
     override var name = "DoramasYT"
-    override val lang = "es"
+    override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(
-        TvType.TvSeries,
-        TvType.Movie,
+        TvType.AsianDrama,
     )
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val urls = listOf(
             Pair("$mainUrl/emision", "En emisión"),
             Pair(
@@ -148,7 +147,7 @@ class DoramasYTProvider : MainAPI() {
                     callback.invoke(link)
                 }
             } else {
-                loadExtractor(url, mainUrl, callback)
+                loadExtractor(url, mainUrl, subtitleCallback, callback)
             }
         }
         return true

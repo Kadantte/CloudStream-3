@@ -31,13 +31,12 @@
     <string name="swipe_vertical_enabled_key" translatable="false">swipe_vertical_enabled_key</string>
     <string name="display_sub_key" translatable="false">display_sub_key</string>
     <string name="show_fillers_key" translatable="false">show_fillers_key</string>
+    <string name="show_trailers_key" translatable="false">show_trailers_key</string>
+    <string name="show_kitsu_posters_key" translatable="false">show_kitsu_posters_key</string>
     <string name="random_button_key" translatable="false">random_button_key</string>
     <string name="provider_lang_key" translatable="false">provider_lang_key</string>
     <string name="dns_key" translatable="false">dns_key</string>
     <string name="download_path_key" translatable="false">download_path_key</string>
-    <string name="nginx_url_key" translatable="false">nginx_url_key</string>
-    <string name="nginx_credentials" translatable="false">nginx_credentials</string>
-    <string name="nginx_info" translatable="false">nginx_info</string>
     <string name="app_name_download_path" translatable="false">Cloudstream</string>
     <string name="app_layout_key" translatable="false">app_layout_key</string>
     <string name="primary_color_key" translatable="false">primary_color_key</string>
@@ -51,21 +50,28 @@
     <string name="show_logcat_key" translatable="false">show_logcat_key</string>
     <string name="bottom_title_key" translatable="false">bottom_title_key</string>
     <string name="poster_ui_key" translatable="false">poster_ui_key</string>
+    <string name="subtitles_encoding_key" translatable="false">subtitles_encoding_key</string>
+    <string name="override_site_key" translatable="false">override_site_key</string>
+    <string name="redo_setup_key" translatable="false">redo_setup_key</string>
 
     <!-- FORMAT MIGHT TRANSLATE, WILL CAUSE CRASH IF APPLIED WRONG -->
-    <string name="extra_info_format" translatable="false" formatted="true">%d %s | %sMB</string>
-    <string name="storage_size_format" translatable="false" formatted="true">%s • %sGB</string>
-    <string name="download_size_format" translatable="false" formatted="true">%sMB / %sMB</string>
-    <string name="mb_format" translatable="false" formatted="true">%dMB</string>
-    <string name="episode_name_format" translatable="false" formatted="true">%s %s</string>
-    <string name="ffw_text_format" translatable="false" formatted="true">+%d</string>
-    <string name="rew_text_format" translatable="false" formatted="true">-%d</string>
-    <string name="ffw_text_regular_format" translatable="false" formatted="true">%d</string>
-    <string name="rew_text_regular_format" translatable="false" formatted="true">%d</string>
-    <string name="rating_format" translatable="false" formatted="true">%.1f/10.0</string>
-    <string name="year_format" translatable="false" formatted="true">%d</string>
+    <string name="extra_info_format" formatted="true" translatable="false">%d %s | %sMB</string>
+    <string name="storage_size_format" formatted="true" translatable="false">%s • %sGB</string>
+    <string name="download_size_format" formatted="true" translatable="false">%sMB / %sMB</string>
+    <string name="mb_format" formatted="true" translatable="false">%dMB</string>
+    <string name="episode_name_format" formatted="true" translatable="false">%s %s</string>
+    <string name="ffw_text_format" formatted="true" translatable="false">+%d</string>
+    <string name="rew_text_format" formatted="true" translatable="false">-%d</string>
+    <string name="ffw_text_regular_format" formatted="true" translatable="false">%d</string>
+    <string name="rew_text_regular_format" formatted="true" translatable="false">%d</string>
+    <string name="rating_format" formatted="true" translatable="false">%.1f/10.0</string>
+    <string name="year_format" formatted="true" translatable="false">%d</string>
     <string name="app_dub_sub_episode_text_format" formatted="true">%s Ep %d</string>
     <string name="cast_format" formatted="true">Cast: %s</string>
+    <string name="next_episode_format" formatted="true">Episode %d will be released in</string>
+    <string name="next_episode_time_day_format" formatted="true">%dd %dh %dm</string>
+    <string name="next_episode_time_hour_format" formatted="true">%dh %dm</string>
+    <string name="next_episode_time_min_format" formatted="true">%dm</string>
 
     <!-- IS NOT NEEDED TO TRANSLATE AS THEY ARE ONLY USED FOR SCREEN READERS AND WONT SHOW UP TO NORMAL USERS -->
     <string name="result_poster_img_des">Poster</string>
@@ -87,6 +93,7 @@
     <string name="duration_format" formatted="true">%d min</string>
 
     <string name="app_name">CloudStream</string>
+    <string name="play_with_app_name">Play with CloudStream</string>
     <string name="title_home">Home</string>
     <string name="title_search">Search</string>
     <string name="title_downloads">Downloads</string>
@@ -114,6 +121,7 @@
     <string name="type_re_watching">Rewatching</string>
 
     <string name="play_movie_button">Play Movie</string>
+    <string name="play_livestream_button">Play Livestream</string>
     <string name="play_torrent_button">Stream Torrent</string>
     <string name="pick_source">Sources</string>
     <string name="pick_subtitle">Subtitles</string>
@@ -131,6 +139,7 @@
     <string name="download_canceled">Download Canceled</string>
     <string name="download_done">Download Done</string>
     <string name="download_format" translatable="false">%s - %s</string>
+    <string name="stream">Stream</string>
 
     <string name="error_loading_links_toast">Error Loading Links</string>
     <string name="download_storage_text">Internal Storage</string>
@@ -179,6 +188,7 @@
 
     <string name="subs_auto_select_language">Auto-Select Language</string>
     <string name="subs_download_languages">Download Languages</string>
+    <string name="subs_subtitle_languages">Subtitle Language</string>
     <string name="subs_hold_to_reset_to_default">Hold to reset to default</string>
     <string name="subs_import_text" formatted="true">Import fonts by placing them in %s</string>
     <string name="continue_watching">Continue Watching</string>
@@ -239,11 +249,8 @@
     <string name="backup_failed_error_format">Error backing up %s</string>
 
     <string name="search">Search</string>
-    <string name="category_nginx">Nginx</string>
-    <string name="category_credits">Credits and account</string>
+    <string name="category_account">Accounts</string>
     <string name="category_updates">Updates and backup</string>
-    <string name="nginx_credentials_title">Nginx Credential</string>
-    <string name="nginx_credentials_summary">You have to use the following format mycoolusername:mysecurepassword123</string>
     <string name="nginx_info_title">What is Nginx ?</string>
     <string name="nginx_info_summary">Nginx is a software that can be used to display files from a server that you own. Click to see a Nginx setup guide</string>
 
@@ -253,6 +260,9 @@
     <string name="bug_report_settings_off">Only sends data on crashes</string>
     <string name="bug_report_settings_on">Sends no data</string>
     <string name="show_fillers_settings">Show filler episode for anime</string>
+    <string name="show_trailers_settings">Show trailers</string>
+    <string name="kitsu_settings">Show posters from kitsu</string>
+
     <string name="updates_settings">Show app updates</string>
     <string name="updates_settings_des">Automatically search for new updates on start</string>
     <string name="uprereleases_settings">Update to prereleases</string>
@@ -320,6 +330,7 @@
     <string name="documentaries">Documentaries</string>
     <string name="ova">OVA</string>
     <string name="asian_drama">Asian Dramas</string>
+    <string name="livestreams">Livestreams</string>
 
     <!--singular-->
     <string name="movies_singular">Movie</string>
@@ -330,6 +341,7 @@
     <string name="torrent_singular">Torrent</string>
     <string name="documentaries_singular">Documentary</string>
     <string name="asian_drama_singular">Asian Drama</string>
+    <string name="live_singular">Livestream</string>
 
     <string name="source_error">Source error</string>
     <string name="remote_error">Remote error</string>
@@ -384,6 +396,10 @@
     <string name="dns_pref">DNS over HTTPS</string>
     <string name="dns_pref_summary">Useful for bypassing ISP blocks</string>
 
+    <string name="add_site_pref">Clone site</string>
+    <string name="remove_site_pref">Remove site</string>
+    <string name="add_site_summary">Add a clone of an existing site, with a different url</string>
+
     <string name="download_path_pref">Download path</string>
 
     <string name="nginx_url_pref">Nginx server url</string>
@@ -412,14 +428,15 @@
         responsibility of user to avoid any actions that might violate the laws governing his/her locality. Use
         CloudStream 3 at your own risk.
     </string>
-    <string name="general">General</string>
+    <string name="category_general">General</string>
     <string name="random_button_settings">Random Button</string>
     <string name="random_button_settings_desc">Show random button on Homepage</string>
     <string name="provider_lang_settings">Provider languages</string>
     <string name="app_layout">App Layout</string>
     <string name="preferred_media_settings">Preferred media</string>
-    <string name="category_preferred_media_and_lang">Preferred media and language</string>
-    <string name="category_ui">User interface</string>
+    <string name="subtitles_encoding">Subtitle encoding</string>
+    <string name="category_preferred_media_and_lang">Language</string>
+    <string name="category_ui">Layout</string>
 
     <string name="automatic">Auto</string>
     <string name="tv_layout">TV layout</string>
@@ -435,6 +452,16 @@
     <!-- account stuff -->
     <string name="anilist_key" translatable="false">anilist_key</string>
     <string name="mal_key" translatable="false">mal_key</string>
+    <string name="opensubtitles_key" translatable="false">opensubtitles_key</string>
+    <string name="nginx_key" translatable="false">nginx_key</string>
+    <string name="example_password">password123</string>
+    <string name="example_username">MyCoolUsername</string>
+    <string name="example_email">hello@world.com</string>
+    <string name="example_ip">127.0.0.1</string>
+    <string name="example_site_name">MyCoolSite</string>
+    <string name="example_site_url">example.com</string>
+    <string name="example_lang_name">Language code (en)</string>
+
     <!--
     <string name="mal_account_settings" translatable="false">MAL</string>
     <string name="anilist_account_settings" translatable="false">AniList</string>
@@ -449,6 +476,7 @@
     <string name="login">Login</string>
     <string name="switch_account">Switch account</string>
     <string name="add_account">Add account</string>
+    <string name="create_account">Create account</string>
     <string name="add_sync">Add tracking</string>
     <string name="added_sync_format" formatted="true">Added %s</string>
     <string name="upload_sync">Sync</string>
@@ -488,6 +516,7 @@
     <string name="recommended">Recommended</string>
     <string name="player_loaded_subtitles" formatted="true">Loaded %s</string>
     <string name="player_load_subtitles">Load from file</string>
+    <string name="player_load_subtitles_online">Load from Internet</string>
     <string name="downloaded_file">Downloaded file</string>
     <string name="actor_main">Main</string>
     <string name="actor_supporting">Supporting</string>
@@ -521,4 +550,23 @@
     <string name="title">Title</string>
     <string name="resolution">Resolution</string>
     <string name="error_invalid_id">Invalid id</string>
+    <string name="error_invalid_data">Invalid data</string>
+    <string name="error_invalid_url">Invalid url</string>
+    <string name="error">Error</string>
+    <string name="subtitles_remove_captions">Remove closed captions from subtitles</string>
+    <string name="subtitles_remove_bloat">Remove bloat from subtitles</string>
+    <string name="extras">Extras</string>
+    <string name="trailer">Trailer</string>
+    <string name="network_adress_example">Link to stream</string>
+    <string name="referer">Referer</string>
+    <string name="next">Next</string>
+    <string name="provider_languages_tip">Watch videos in these languages</string>
+    <string name="previous">Previous</string>
+    <string name="skip_setup">Skip setup</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="app_layout_subtext">Change the look of the app to suit your device</string>
+    <string name="crash_reporting_title">Crash reporting</string>
+    <string name="preferred_media_subtext">What do you want to see</string>
+    <string name="setup_done">Done</string>
 </resources>

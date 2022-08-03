@@ -22,6 +22,7 @@ enum class PlayerEventType(val value: Int) {
     ShowSpeed(11),
     ShowMirrors(12),
     Resize(13),
+    SearchSubtitlesOnline(14),
 }
 
 enum class CSPlayerEvent(val value: Int) {
@@ -87,8 +88,11 @@ interface IPlayer {
         subtitlesUpdates: (() -> Unit)? = null,                     // callback from player to inform that subtitles have updated in some way
         embeddedSubtitlesFetched: ((List<SubtitleData>) -> Unit)? = null, // callback from player to give all embedded subtitles
     )
+    fun releaseCallbacks()
 
     fun updateSubtitleStyle(style: SaveCaptionStyle)
+    fun saveData()
+
     fun loadPlayer(
         context: Context,
         sameEpisode: Boolean,
@@ -97,6 +101,7 @@ interface IPlayer {
         startPosition: Long? = null,
         subtitles : Set<SubtitleData>,
         subtitle : SubtitleData?,
+        autoPlay : Boolean? = true
     )
 
     fun reloadPlayer(context: Context)
@@ -112,4 +117,7 @@ interface IPlayer {
     fun onResume(context: Context)
 
     fun release()
+
+    /** Get if player is actually used */
+    fun isActive() : Boolean
 }

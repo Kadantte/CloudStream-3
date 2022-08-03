@@ -61,6 +61,8 @@
         <item name="boxItemBackground">@color/boxItemBackground</item>
         <item name="iconColor">@color/iconColor</item>
         <item name="white">#FFF</item>
+
+        <item name="preferenceTheme">@style/CustomPreferenceThemeOverlay</item>
     </style>
 
     <style name="ListViewStyle" parent="Widget.AppCompat.ListView">
@@ -281,7 +283,7 @@
         <item name="behavior_peekHeight">512dp</item>
     </style>
 
-    <style name="PreferenceTheme" parent="@style/AppTheme"></style>
+    <style name="PreferenceTheme" parent="@style/AppTheme" />
 
     <style name="Theme.AlertDialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
         <item name="android:windowMinWidthMajor">@android:dimen/dialog_min_width_major</item>
@@ -355,8 +357,9 @@
 
     <style name="AlertDialogCustomBlack" parent="Theme.AppCompat.Dialog.Alert">
         <item name="android:windowBackground">?attr/primaryBlackBackground</item>
-        <item name="android:layout_width">fill_parent</item>
-        <item name="android:layout_height">fill_parent</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+
         <!-- No backgrounds, titles or window float -->
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowIsFloating">false</item>
@@ -365,6 +368,10 @@
 
     <style name="PopupMenu" parent="@android:style/Widget.PopupMenu">
         <item name="android:backgroundTint">?attr/primaryBlackBackground</item>
+    </style>
+
+    <style name="CustomPreferenceThemeOverlay" parent="@style/PreferenceThemeOverlay">
+        <item name="android:layout">@layout/settings_title_top</item>
     </style>
 
     <style name="SettingsItem">
@@ -455,8 +462,9 @@
         <item name="android:ellipsize">marquee</item>
         <item name="android:foreground">?attr/selectableItemBackgroundBorderless</item>
         <item name="android:drawablePadding">20dp</item>
-        <item name="drawableTint">@color/check_selection_color</item>
-        <item name="drawableStartCompat">@drawable/ic_baseline_check_24</item>
+<!--        <item name="drawableTint">@color/check_selection_color</item>-->
+<!--        Set color in the drawable instead of tint to allow multiple drawables-->
+        <item name="drawableStartCompat">@drawable/ic_baseline_check_24_listview</item>
     </style>
 
     <style name="BlackButton" parent="NiceButton">

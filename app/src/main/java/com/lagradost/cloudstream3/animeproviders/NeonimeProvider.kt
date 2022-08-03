@@ -1,6 +1,7 @@
 package com.lagradost.cloudstream3.animeproviders
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
@@ -11,7 +12,7 @@ class NeonimeProvider : MainAPI() {
     override var name = "Neonime"
     override val hasQuickSearch = false
     override val hasMainPage = true
-    override val lang = "id"
+    override var lang = "id"
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
@@ -39,45 +40,55 @@ class NeonimeProvider : MainAPI() {
         }
     }
 
-    override suspend fun getMainPage(): HomePageResponse {
-        val document = app.get(mainUrl).document
+    override val mainPage = mainPageOf(
+        "$mainUrl/episode/page/" to "Episode Terbaru",
+        "$mainUrl/tvshows/page/" to "Anime Terbaru",
+        "$mainUrl/movies/page/" to "Movie",
+    )
 
-        val homePageList = ArrayList<HomePageList>()
-
-        document.select("div.item_1.items").forEach { block ->
-            val header = block.previousElementSibling()?.select("h1")!!.text()
-            val animes = block.select("div.item").mapNotNull {
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val document = app.get(request.data + page).document
+        val home = document.select("tbody tr,div.item").mapNotNull {
                 it.toSearchResult()
             }
-            if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
-        }
-
-        return HomePageResponse(homePageList)
+        return newHomePageResponse(request.name, home)
     }
 
     private fun getProperAnimeLink(uri: String): String {
         return when {
             uri.contains("/episode") -> {
-                val href = "$mainUrl/tvshows/" + Regex("episode/(.*)-\\d{1,2}x\\d+").find(uri)?.groupValues?.get(1).toString()
-                when {
-                    !href.contains("-subtitle-indonesia") -> "$href-subtitle-indonesia"
-                    href.contains("-special") -> href.replace(Regex("-x\\d+"), "")
-                    else -> href
+                val title = uri.substringAfter("$mainUrl/episode/").let { tt ->
+                    val fixTitle = Regex("(.*)-\\d{1,2}x\\d+").find(tt)?.groupValues?.getOrNull(1).toString()
+                    when {
+                        !tt.contains("-season") && !tt.contains(Regex("-1x\\d+")) && !tt.contains("one-piece") -> "$fixTitle-season-${Regex("-(\\d{1,2})x\\d+").find(tt)?.groupValues?.getOrNull(1).toString()}"
+                        tt.contains("-special") -> fixTitle.replace(Regex("-x\\d+"), "")
+                        !fixTitle.contains("-subtitle-indonesia") -> "$fixTitle-subtitle-indonesia"
+                        else -> fixTitle
+                    }
                 }
+
+//                title = when {
+//                    title.contains("youkoso-jitsuryoku") && !title.contains("-season") -> title.replace("-e-", "-e-tv-")
+//                    else -> title
+//                }
+
+                "$mainUrl/tvshows/$title"
             }
             else -> uri
         }
     }
 
-    private fun Element.toSearchResult(): SearchResponse {
+    private fun Element.toSearchResult(): AnimeSearchResponse? {
+        val title = this.selectFirst("td.bb a")?.ownText() ?: this.selectFirst("h2")?.text() ?: return null
         val href = getProperAnimeLink(fixUrl(this.select("a").attr("href")))
-        val title = this.select("span.tt.title-episode,h2.title-episode-movie").text()
         val posterUrl = fixUrl(this.select("img").attr("data-src"))
-        val epNum = this.select(".fixyear > h2.text-center").text().replace(Regex("[^0-9]"), "").trim().toIntOrNull()
+        val epNum = this.selectFirst("td.bb span")?.text()?.let { eps ->
+            Regex("Episode\\s?([0-9]+)").find(eps)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        }
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            addDubStatus(dubExist = false, subExist = true, subEpisodes = epNum)
+            addSub(epNum)
         }
 
     }
@@ -96,7 +107,7 @@ class NeonimeProvider : MainAPI() {
 
             newAnimeSearchResponse(title, href, tvType) {
                 this.posterUrl = poster
-                addDubStatus(dubExist = false, subExist = true, subEpisodes = episodes)
+                addSub(episodes)
             }
         }
     }
@@ -106,48 +117,37 @@ class NeonimeProvider : MainAPI() {
 
             if (url.contains("movie") || url.contains("live-action")) {
                 val mTitle = document.selectFirst(".sbox > .data > h1[itemprop = name]")?.text().toString().trim()
-                val mPoster =
-                    document.selectFirst(".sbox > .imagen > .fix > img[itemprop = image]")?.attr("data-src")
-                val mTags = document.select("p.meta_dd > a").map { it.text() }
-                val mYear = document.selectFirst("a[href*=release-year]")!!.text().toIntOrNull()
-                val mDescription = document.select("div[itemprop = description]").text().trim()
-                val mRating = document.select("span[itemprop = ratingValue]").text().toIntOrNull()
+                val mTrailer = document.selectFirst("div.youtube_id iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
 
-                return MovieLoadResponse(
-                    name = mTitle,
-                    url = url,
-                    this.name,
-                    type = TvType.Movie,
-                    dataUrl = url,
-                    posterUrl = mPoster,
-                    year = mYear,
-                    plot = mDescription,
-                    rating = mRating,
-                    tags = mTags
-                )
+                return newMovieLoadResponse(name = mTitle, url = url, type = TvType.Movie, dataUrl = url) {
+                    posterUrl = document.selectFirst(".sbox > .imagen > .fix > img[itemprop = image]")?.attr("data-src")
+                    year = document.selectFirst("a[href*=release-year]")!!.text().toIntOrNull()
+                    plot = document.select("div[itemprop = description]").text().trim()
+                    rating = document.select("span[itemprop = ratingValue]").text().toIntOrNull()
+                    tags = document.select("p.meta_dd > a").map { it.text() }
+                    addTrailer(mTrailer)
+                }
             }
             else {
                 val title = document.select("h1[itemprop = name]").text().trim()
-                val poster = document.selectFirst(".imagen > img")?.attr("data-src")
-                val tags = document.select("#info a[href*=\"-genre/\"]").map { it.text() }
-                val year = document.select("#info a[href*=\"-year/\"]").text().toIntOrNull()
-                val status = getStatus(document.select("div.metadatac > span").last()!!.text().trim())
-                val description = document.select("div[itemprop = description] > p").text().trim()
+                val trailer = document.selectFirst("div.youtube_id_tv iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
 
                 val episodes = document.select("ul.episodios > li").mapNotNull {
-                    val name = it.selectFirst(".episodiotitle > a")!!.ownText().trim()
+                    val header = it.selectFirst(".episodiotitle > a")?.ownText().toString()
+                    val name = Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
                     val link = fixUrl(it.selectFirst(".episodiotitle > a")!!.attr("href"))
                     Episode(link, name)
                 }.reversed()
 
                 return newAnimeLoadResponse(title, url, TvType.Anime) {
                     engName = title
-                    posterUrl = poster
-                    this.year = year
+                    posterUrl = document.selectFirst(".imagen > img")?.attr("data-src")
+                    year = document.select("#info a[href*=\"-year/\"]").text().toIntOrNull()
                     addEpisodes(DubStatus.Subbed, episodes)
-                    showStatus = status
-                    plot = description
-                    this.tags = tags
+                    showStatus = getStatus(document.select("div.metadatac > span").last()!!.text().trim())
+                    plot = document.select("div[itemprop = description] > p").text().trim()
+                    tags = document.select("#info a[href*=\"-genre/\"]").map { it.text() }
+                    addTrailer(trailer)
                 }
             }
     }
@@ -169,7 +169,7 @@ class NeonimeProvider : MainAPI() {
         }
 
         source.apmap {
-            loadExtractor(it, data, callback)
+            loadExtractor(it, data, subtitleCallback, callback)
         }
 
         return true

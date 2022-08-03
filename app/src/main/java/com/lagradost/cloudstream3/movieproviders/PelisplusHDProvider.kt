@@ -8,7 +8,7 @@ import org.jsoup.nodes.Element
 class PelisplusHDProvider:MainAPI() {
     override var mainUrl = "https://pelisplushd.net"
     override var name = "PelisplusHD"
-    override val lang = "es"
+    override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
@@ -16,7 +16,7 @@ class PelisplusHDProvider:MainAPI() {
         TvType.Movie,
         TvType.TvSeries,
     )
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         val document = app.get(mainUrl).document
         val map = mapOf(
@@ -165,7 +165,7 @@ class PelisplusHDProvider:MainAPI() {
     ): Boolean {
         app.get(data).document.select("div.player > script").map { script ->
             fetchUrls(script.data().replace("https://pelisplushd.net/fembed.php?url=","https://www.fembed.com/v/")).apmap {
-                loadExtractor(it, data, callback)
+                loadExtractor(it, data, subtitleCallback, callback)
             }
         }
         return true

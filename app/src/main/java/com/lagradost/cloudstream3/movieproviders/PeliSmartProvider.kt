@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 class PeliSmartProvider: MainAPI() {
     override var mainUrl = "https://pelismart.com"
     override var name = "PeliSmart"
-    override val lang = "es"
+    override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
@@ -17,7 +17,7 @@ class PeliSmartProvider: MainAPI() {
     )
     override val vpnStatus = VPNStatus.MightBeNeeded //Due to evoload sometimes not loading
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         val urls = listOf(
             Pair("$mainUrl/peliculas/", "Peliculas"),
@@ -25,7 +25,8 @@ class PeliSmartProvider: MainAPI() {
             Pair("$mainUrl/documentales/", "Documentales"),
         )
 
-        for ((url, name) in urls) {
+        // has no inf loading
+        urls.apmap { (url, name) ->
             try {
                 val soup = app.get(url).document
                 val home = soup.select(".description-off").map {
@@ -152,7 +153,7 @@ class PeliSmartProvider: MainAPI() {
              .replace("https://pelismarthd.com/p/1.php?v=","https://evoload.io/e/")
              .replace("https://pelismarthd.com/p/2.php?v=","https://streamtape.com/e/")
              .replace("https://pelismarthd.com/p/4.php?v=","https://dood.to/e/")
-             loadExtractor(urlc, data, callback)
+             loadExtractor(urlc, data, subtitleCallback, callback)
          }
         return true
     }

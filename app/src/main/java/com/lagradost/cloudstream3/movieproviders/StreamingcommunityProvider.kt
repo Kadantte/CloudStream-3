@@ -51,25 +51,27 @@ data class Image(
     @JsonProperty("proxy_id") val proxyID: Long,
     @JsonProperty("url") val url: String,
     @JsonProperty("type") val type: String,
-    @JsonProperty("sc_url") val scURL: String,
-    @JsonProperty("proxy") val proxy: Proxy,
-    @JsonProperty("server") val server: Proxy
+//    @JsonProperty("sc_url") val scURL: String,
+//    @JsonProperty("proxy") val proxy: Proxy,
+//    @JsonProperty("server") val server: Proxy
 )
 
-data class Proxy(
-    @JsonProperty("id") val id: Long,
-    @JsonProperty("type") val type: String,
-    @JsonProperty("ip") val ip: String,
-    @JsonProperty("number") val number: Long,
-    @JsonProperty("storage") val storage: Long,
-    @JsonProperty("max_storage") val maxStorage: Long,
-    @JsonProperty("max_conversions") val maxConversions: Any? = null,
-    @JsonProperty("max_publications") val maxPublications: Any? = null,
-    @JsonProperty("created_at") val createdAt: String,
-    @JsonProperty("updated_at") val updatedAt: String,
-    @JsonProperty("upload_bandwidth") val uploadBandwidth: Any? = null,
-    @JsonProperty("upload_bandwidth_limit") val uploadBandwidthLimit: Any? = null
-)
+// Proxy is not used and crashes otherwise
+
+//data class Proxy(
+//    @JsonProperty("id") val id: Long,
+//    @JsonProperty("type") val type: String,
+//    @JsonProperty("ip") val ip: String,
+//    @JsonProperty("number") val number: Long,
+//    @JsonProperty("storage") val storage: Long,
+//    @JsonProperty("max_storage") val maxStorage: Long,
+//    @JsonProperty("max_conversions") val maxConversions: Any? = null,
+//    @JsonProperty("max_publications") val maxPublications: Any? = null,
+//    @JsonProperty("created_at") val createdAt: String,
+//    @JsonProperty("updated_at") val updatedAt: String,
+//    @JsonProperty("upload_bandwidth") val uploadBandwidth: Any? = null,
+//    @JsonProperty("upload_bandwidth_limit") val uploadBandwidthLimit: Any? = null
+//)
 
 data class Season(
     @JsonProperty("id") val id: Long,
@@ -125,8 +127,8 @@ data class TrailerElement(
 
 
 class StreamingcommunityProvider : MainAPI() {
-    override val lang = "it"
-    override var mainUrl = "https://streamingcommunity.top"
+    override var lang = "it"
+    override var mainUrl = "https://streamingcommunity.best"
     override var name = "Streamingcommunity"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -172,10 +174,10 @@ class StreamingcommunityProvider : MainAPI() {
         val posterMap = hashMapOf<String, String>()
     }
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         val document = app.get(mainUrl).document
-        document.select("slider-title").subList(2, 6).map { it ->
+        document.select("slider-title").subList(0, 3).map { it ->
             if (it.attr("slider-name") != "In arrivo") {
                 val films = it.attr("titles-json")
                 val lista = mutableListOf<MovieSearchResponse>()
@@ -282,7 +284,7 @@ class StreamingcommunityProvider : MainAPI() {
         val trailerinfojs = document.select("slider-trailer").attr("videos")
         val trailerinfo = parseJson<List<TrailerElement>>(trailerinfojs)
         val trailerurl: String? = if (trailerinfo.isNotEmpty()) {
-            "https://www.youtube.com/watch?v=${trailerinfo[0].id}"
+            "https://www.youtube.com/watch?v=${trailerinfo[0].url}"
         } else {
             null
         }
@@ -396,7 +398,7 @@ class StreamingcommunityProvider : MainAPI() {
     }
 
 
-    private fun getM3u8Qualities(
+    private suspend fun getM3u8Qualities(
         m3u8Link: String,
         referer: String,
         qualityName: String,

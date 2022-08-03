@@ -8,7 +8,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class MyCimaProvider : MainAPI() {
-    override val lang = "ar"
+    override var lang = "ar"
     override var mainUrl = "https://mycima.tv"
     override var name = "MyCima"
     override val usesWebView = false
@@ -44,7 +44,7 @@ class MyCimaProvider : MainAPI() {
         )
     }
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         // Title, Url
         val moviesUrl = listOf(
             "Movies" to "$mainUrl/movies/page/" + (0..25).random(),

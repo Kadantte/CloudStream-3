@@ -5,13 +5,13 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
-import okhttp3.Interceptor
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
 
 class HDMovie5 : MainAPI() {
-    override var mainUrl = "https://hdmovie5.tv"
+    override var mainUrl = "https://hdmovie2.click"
     override var name = "HDMovie"
-    override val lang = "hi"
+    override var lang = "hi"
 
     override val hasQuickSearch = true
     override val hasMainPage = true
@@ -20,28 +20,27 @@ class HDMovie5 : MainAPI() {
         TvType.TvSeries,
     )
 
-    override suspend fun getMainPage(): HomePageResponse {
-        val doc = app.get(mainUrl).document.select("div.content")
-        val list = mapOf(
-            "Featured Movies" to "featured",
-            "Updated Movies" to "normal"
-        )
-        return HomePageResponse(list.map { item ->
-            HomePageList(item.key,
-                doc.select("div.${item.value}>.item").map {
-                    val data = it.select(".data")
-                    val a = data.select("a")
-                    MovieSearchResponse(
-                        a.text(),
-                        a.attr("href"),
-                        this.name,
-                        TvType.Movie,
-                        it.select("img").attr("src"),
-                        data.select("span").text().toIntOrNull()
-                    )
-                }
-            )
-        })
+    override val mainPage = mainPageOf(
+        "$mainUrl/genre/tv-movie/page/" to "TV Movie",
+        "$mainUrl/genre/tv-show/page/" to "TV- Show",
+        "$mainUrl/genre/hindi-dubbed/page/" to "Hindi Dubbed",
+        "$mainUrl/genre/netflix/page/" to "NETFLIX",
+    )
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val home = app.get(request.data + page).document.select("article.item").mapNotNull {
+            it.toSearchResult()
+        }
+        return newHomePageResponse(request.name, home)
+    }
+
+    private fun Element.toSearchResult(): SearchResponse? {
+        val title = this.selectFirst("h3 > a")?.text()?.trim() ?: return null
+        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
+        val posterUrl = this.selectFirst("img")?.attr("src")
+        return newMovieSearchResponse(title, href, TvType.Movie) {
+            addPoster(posterUrl)
+        }
     }
 
     private data class QuickSearchResponse(
@@ -101,7 +100,7 @@ class HDMovie5 : MainAPI() {
             (doc.select("#repimdb>strong").text().toFloatOrNull()?.times(1000))?.toInt(),
             info.select(".sgeneros>a").map { it.text() },
             info.select(".runtime").text().substringBefore(" Min.").toIntOrNull(),
-            null,
+            mutableListOf(),
             doc.select("#single_relacionados>article>a").map {
                 val img = it.select("img")
                 MovieSearchResponse(
@@ -137,7 +136,7 @@ class HDMovie5 : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         return data.split(",").apmapIndexed { index, it ->
-            val html = app.post(
+            val p = app.post(
                 "$mainUrl/wp-admin/admin-ajax.php",
                 data = mapOf(
                     "action" to "doo_player_ajax",
@@ -145,10 +144,11 @@ class HDMovie5 : MainAPI() {
                     "nume" to "${index + 1}",
                     "type" to "movie"
                 )
-            ).parsed<PlayerAjaxResponse>().embedURL ?: return@apmapIndexed false
+            )
+            val html = p.parsedSafe<PlayerAjaxResponse>()?.embedURL ?: return@apmapIndexed false
             val doc = Jsoup.parse(html)
             val link = doc.select("iframe").attr("src")
-            loadExtractor(httpsify(link), "$mainUrl/",callback)
+            loadExtractor(httpsify(link), "$mainUrl/", subtitleCallback, callback)
         }.contains(true)
     }
 }
