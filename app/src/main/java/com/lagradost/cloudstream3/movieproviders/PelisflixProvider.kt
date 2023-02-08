@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 class PelisflixProvider : MainAPI() {
     override var mainUrl = "https://pelisflix.li"
     override var name = "Pelisflix"
-    override val lang = "es"
+    override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
@@ -18,7 +18,7 @@ class PelisflixProvider : MainAPI() {
         TvType.TvSeries,
     )
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         val urls = listOf(
             Pair("$mainUrl/ver-peliculas-online-gratis-fullhdc3/", "Películas"),
@@ -222,7 +222,7 @@ class PelisflixProvider : MainAPI() {
                     allowRedirects = false
                 ).okhttpResponse.headers.values("location").apmap { link ->
                     val url1 = link.replace("#bu", "")
-                    loadExtractor(url1, data, callback)
+                    loadExtractor(url1, data, subtitleCallback, callback)
                 }
             }
         }

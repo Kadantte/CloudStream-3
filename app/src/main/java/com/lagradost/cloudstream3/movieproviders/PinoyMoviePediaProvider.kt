@@ -10,13 +10,13 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 class PinoyMoviePediaProvider : MainAPI() {
     override var name = "Pinoy Moviepedia"
     override var mainUrl = "https://pinoymoviepedia.ru"
-    override val lang = "tl"
+    override var lang = "tl"
     override val supportedTypes = setOf(TvType.AsianDrama)
     override val hasDownloadSupport = true
     override val hasMainPage = true
     override val hasQuickSearch = false
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val all = ArrayList<HomePageList>()
         val document = app.get(mainUrl).document
         val mainbody = document.getElementsByTag("body")
@@ -231,7 +231,7 @@ class PinoyMoviePediaProvider : MainAPI() {
                     callback.invoke(it)
                 }
             } else {
-                loadExtractor(link, mainUrl, callback)
+                loadExtractor(link, mainUrl, subtitleCallback, callback)
             }
         }
         return count > 0

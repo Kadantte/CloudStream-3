@@ -47,7 +47,7 @@
     "AsiaFlixProvider": {
         "name": "AsiaFlix",
         "url": "https://asiaflix.app",
-        "status": 3
+        "status": 0
     },
     "BflixProvider": {
         "name": "Bflix",
@@ -97,7 +97,7 @@
     "EgyBestProvider": {
         "name": "EgyBest",
         "url": "https://egy.best",
-        "status": 1
+        "status": 0
     },
     "EntrepeliculasyseriesProvider": {
         "name": "EntrePeliculasySeries",
@@ -116,13 +116,13 @@
     },
     "GogoanimeProvider": {
         "name": "GogoAnime",
-        "url": "https://gogoanime.film",
+        "url": "https://gogoanime.sk",
         "status": 1
     },
     "KawaiifuProvider": {
         "name": "Kawaiifu",
         "url": "https://kawaiifu.com",
-        "status": 0
+        "status": 1
     },
     "HDMProvider": {
         "name": "HD Movies",
@@ -222,7 +222,7 @@
     "SoaptwoDayProvider": {
         "name": "Soap2Day",
         "url": "https://secretlink.xyz",
-        "status": 1
+        "status": 0
     },
     "TenshiProvider": {
         "name": "Tenshi.moe",
@@ -241,7 +241,7 @@
     },
     "TwoEmbedProvider": {
         "name": "2Embed",
-        "url": "https://www.2embed.ru",
+        "url": "https://www.2embed.to",
         "status": 1
     },
     "VMoveeProvider": {
@@ -264,9 +264,14 @@
         "url": "https://vidembed.cc",
         "status": 1
     },
+    "YomoviesProvider": {
+        "name": "Yomovies",
+        "url": "https://yomovies.vip",
+        "status": 1
+    },
     "WatchAsianProvider": {
         "name": "WatchAsian",
-        "url": "https://watchasian.sh",
+        "url": "https://watchasian.cx",
         "status": 1
     },
     "WatchCartoonOnlineProvider": {

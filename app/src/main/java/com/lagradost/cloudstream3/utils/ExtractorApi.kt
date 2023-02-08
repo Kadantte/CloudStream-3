@@ -1,25 +1,74 @@
 package com.lagradost.cloudstream3.utils
 
 import android.net.Uri
+import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.*
-import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
+import com.lagradost.cloudstream3.mvvm.logError
 import kotlinx.coroutines.delay
 import org.jsoup.Jsoup
 
-data class ExtractorLink(
-    val source: String,
-    val name: String,
-    override val url: String,
+/**
+ * For use in the ConcatenatingMediaSource.
+ * If features are missing (headers), please report and we can add it.
+ * @param durationUs use Long.toUs() for easier input
+ * */
+data class PlayListItem(
+    val url: String,
+    val durationUs: Long,
+)
+
+/**
+ * Converts Seconds to MicroSeconds, multiplication by 1_000_000
+ * */
+fun Long.toUs(): Long {
+    return this * 1_000_000
+}
+
+/**
+ * If your site has an unorthodox m3u8-like system where there are multiple smaller videos concatenated
+ * use this.
+ * */
+data class ExtractorLinkPlayList(
+    override val source: String,
+    override val name: String,
+    val playlist: List<PlayListItem>,
     override val referer: String,
-    val quality: Int,
-    val isM3u8: Boolean = false,
+    override val quality: Int,
+    override val isM3u8: Boolean = false,
     override val headers: Map<String, String> = mapOf(),
     /** Used for getExtractorVerifierJob() */
-    val extractorData: String? = null
-) : VideoDownloadManager.IDownloadableMinimum
+    override val extractorData: String? = null,
+) : ExtractorLink(
+    source,
+    name,
+    // Blank as un-used
+    "",
+    referer,
+    quality,
+    isM3u8,
+    headers,
+    extractorData
+)
+
+
+open class ExtractorLink(
+    open val source: String,
+    open val name: String,
+    override val url: String,
+    override val referer: String,
+    open val quality: Int,
+    open val isM3u8: Boolean = false,
+    override val headers: Map<String, String> = mapOf(),
+    /** Used for getExtractorVerifierJob() */
+    open val extractorData: String? = null,
+) : VideoDownloadManager.IDownloadableMinimum {
+    override fun toString(): String {
+        return "ExtractorLink(name=$name, url=$url, referer=$referer, isM3u8=$isM3u8)"
+    }
+}
 
 data class ExtractorUri(
     val uri: Uri,
@@ -44,6 +93,12 @@ data class ExtractorSubtitleLink(
     override val headers: Map<String, String> = mapOf()
 ) : VideoDownloadManager.IDownloadableMinimum
 
+/**
+ * Removes https:// and www.
+ * To match urls regardless of schema, perhaps Uri() can be used?
+ */
+val schemaStripRegex = Regex("""^(https:|)//(www\.|)""")
+
 enum class Qualities(var value: Int) {
     Unknown(400),
     P144(144), // 144p
@@ -61,6 +116,7 @@ enum class Qualities(var value: Int) {
                 0 -> "Auto"
                 Unknown.value -> ""
                 P2160.value -> "4K"
+                null -> ""
                 else -> "${qual}p"
             }
         }
@@ -88,20 +144,48 @@ fun getAndUnpack(string: String): String {
     return JsUnpacker(packedText).unpack() ?: string
 }
 
+suspend fun unshortenLinkSafe(url: String): String {
+    return try {
+        if (ShortLink.isShortLink(url))
+            ShortLink.unshorten(url)
+        else url
+    } catch (e: Exception) {
+        logError(e)
+        url
+    }
+}
+
+suspend fun loadExtractor(
+    url: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    return loadExtractor(
+        url = url,
+        referer = null,
+        subtitleCallback = subtitleCallback,
+        callback = callback
+    )
+}
+
 /**
  * Tries to load the appropriate extractor based on link, returns true if any extractor is loaded.
  * */
 suspend fun loadExtractor(
     url: String,
     referer: String? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+    val currentUrl = unshortenLinkSafe(url)
+    val compareUrl = currentUrl.lowercase().replace(schemaStripRegex, "")
     for (extractor in extractorApis) {
-        if (url.startsWith(extractor.mainUrl)) {
-            extractor.getSafeUrl(url, referer)?.forEach(callback)
+        if (compareUrl.startsWith(extractor.mainUrl.replace(schemaStripRegex, ""))) {
+            extractor.getSafeUrl(currentUrl, referer, subtitleCallback, callback)
             return true
         }
     }
+
     return false
 }
 
@@ -118,12 +202,17 @@ val extractorApis: Array<ExtractorApi> = arrayOf(
     MwvnVizcloudInfo(),
     VizcloudDigital(),
     VizcloudCloud(),
+    VizcloudSite(),
+    VideoVard(),
+    VideovardSX(),
     Mp4Upload(),
     StreamTape(),
 
     //mixdrop extractors
     MixDropBz(),
     MixDropCh(),
+    MixDropTo(),
+
     MixDrop(),
 
     Mcloud(),
@@ -143,11 +232,13 @@ val extractorApis: Array<ExtractorApi> = arrayOf(
     SBfull(),
     // Streamhub(), cause Streamhub2() works
     Streamhub2(),
+    Ssbstream(),
 
     FEmbed(),
     FeHD(),
     Fplayer(),
     DBfilm(),
+    Luxubu(),
     LayarKaca(),
     //  WatchSB(), 'cause StreamSB.kt works
     Uqload(),
@@ -169,6 +260,8 @@ val extractorApis: Array<ExtractorApi> = arrayOf(
     DoodSoExtractor(),
     DoodLaExtractor(),
     DoodWsExtractor(),
+    DoodShExtractor(),
+    DoodWatchExtractor(),
 
     AsianLoad(),
 
@@ -178,6 +271,11 @@ val extractorApis: Array<ExtractorApi> = arrayOf(
     ZplayerV2(),
     Upstream(),
 
+    Maxstream(),
+    Tantifilm(),
+    Userload(),
+    Supervideo(),
+    GuardareStream(),
 
     // StreamSB.kt works
     //  SBPlay(),
@@ -191,11 +289,32 @@ val extractorApis: Array<ExtractorApi> = arrayOf(
 
     Blogger(),
     Solidfiles(),
+    YourUpload(),
 
     Hxfile(),
     KotakAnimeid(),
     Neonime8n(),
     Neonime7n(),
+    Yufiles(),
+    Aico(),
+
+    JWPlayer(),
+    Meownime(),
+    DesuArcg(),
+    DesuOdchan(),
+    DesuOdvip(),
+    DesuDrive(),
+
+    Filesim(),
+    Linkbox(),
+    Acefile(),
+    SpeedoStream(),
+
+    YoutubeExtractor(),
+    YoutubeShortLinkExtractor(),
+    Streamlare(),
+    VidSrcExtractor(),
+    VidSrcExtractor2(),
 )
 
 fun getExtractorApiFromName(name: String): ExtractorApi {
@@ -254,14 +373,39 @@ abstract class ExtractorApi {
     abstract val mainUrl: String
     abstract val requiresReferer: Boolean
 
-    suspend fun getSafeUrl(url: String, referer: String? = null): List<ExtractorLink>? {
-        return suspendSafeApiCall { getUrl(url, referer) }
+    //suspend fun getSafeUrl(url: String, referer: String? = null): List<ExtractorLink>? {
+    //    return suspendSafeApiCall { getUrl(url, referer) }
+    //}
+
+    // this is the new extractorapi, override to add subtitles and stuff
+    open suspend fun getUrl(
+        url: String,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        getUrl(url, referer)?.forEach(callback)
+    }
+
+    suspend fun getSafeUrl(
+        url: String,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        try {
+            getUrl(url, referer, subtitleCallback, callback)
+        } catch (e: Exception) {
+            logError(e)
+        }
     }
 
     /**
      * Will throw errors, use getSafeUrl if you don't want to handle the exception yourself
      */
-    abstract suspend fun getUrl(url: String, referer: String? = null): List<ExtractorLink>?
+    open suspend fun getUrl(url: String, referer: String? = null): List<ExtractorLink>? {
+        return emptyList()
+    }
 
     open fun getExtractorUrl(id: String): String {
         return id

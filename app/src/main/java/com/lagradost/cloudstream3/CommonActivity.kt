@@ -22,6 +22,7 @@ import com.lagradost.cloudstream3.utils.UIHelper
 import com.lagradost.cloudstream3.utils.UIHelper.hasPIPPermission
 import com.lagradost.cloudstream3.utils.UIHelper.shouldShowPIPMode
 import com.lagradost.cloudstream3.utils.UIHelper.toPx
+import org.schabi.newpipe.extractor.NewPipe
 import java.util.*
 
 object CommonActivity {
@@ -33,7 +34,6 @@ object CommonActivity {
     var canShowPipMode: Boolean = false
     var isInPIPMode: Boolean = false
 
-    val backEvent = Event<Boolean>()
     val onColorSelectedEvent = Event<Pair<Int, Int>>()
     val onDialogDismissedEvent = Event<Int>()
 
@@ -116,6 +116,8 @@ object CommonActivity {
                     act.hasPIPPermission() // CHECK IF FEATURE IS ENABLED IN SETTINGS
 
         act.updateLocale()
+
+        NewPipe.init(DownloaderTestImpl.getInstance())
     }
 
     private fun Activity.enterPIPMode() {
@@ -281,6 +283,10 @@ object CommonActivity {
             }
             KeyEvent.KEYCODE_S, KeyEvent.KEYCODE_NUMPAD_9 -> {
                 PlayerEventType.ShowMirrors
+            }
+            // OpenSubtitles shortcut
+            KeyEvent.KEYCODE_O, KeyEvent.KEYCODE_NUMPAD_8 -> {
+                PlayerEventType.SearchSubtitlesOnline
             }
             KeyEvent.KEYCODE_E, KeyEvent.KEYCODE_NUMPAD_3 -> {
                 PlayerEventType.ShowSpeed

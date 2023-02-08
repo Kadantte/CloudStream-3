@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.AcraApplication.Companion.getKey
 import com.lagradost.cloudstream3.AcraApplication.Companion.getKeys
@@ -12,11 +11,9 @@ import com.lagradost.cloudstream3.AcraApplication.Companion.openBrowser
 import com.lagradost.cloudstream3.AcraApplication.Companion.setKey
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.syncproviders.AccountManager
-import com.lagradost.cloudstream3.syncproviders.OAuth2API
-import com.lagradost.cloudstream3.syncproviders.OAuth2API.Companion.appString
-import com.lagradost.cloudstream3.syncproviders.OAuth2API.Companion.maxStale
-import com.lagradost.cloudstream3.syncproviders.OAuth2API.Companion.unixTime
+import com.lagradost.cloudstream3.syncproviders.AuthAPI
 import com.lagradost.cloudstream3.syncproviders.SyncAPI
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.splitQuery
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -32,11 +29,13 @@ class AniListApi(index: Int) : AccountManager(index), SyncAPI {
     override val idPrefix = "anilist"
     override var mainUrl = "https://anilist.co"
     override val icon = R.drawable.ic_anilist_icon
+    override val requiresLogin = false
+    override val createAccountUrl = "$mainUrl/signup"
 
-    override fun loginInfo(): OAuth2API.LoginInfo? {
+    override fun loginInfo(): AuthAPI.LoginInfo? {
         // context.getUser(true)?.
         getKey<AniListUser>(accountId, ANILIST_USER_KEY)?.let { user ->
-            return OAuth2API.LoginInfo(
+            return AuthAPI.LoginInfo(
                 profilePicture = user.picture,
                 name = user.name,
                 accountIndex = accountIndex
@@ -91,15 +90,15 @@ class AniListApi(index: Int) : AccountManager(index), SyncAPI {
         }
     }
 
-    override suspend fun getResult(id: String): SyncAPI.SyncResult? {
+    override suspend fun getResult(id: String): SyncAPI.SyncResult {
         val internalId = (Regex("anilist\\.co/anime/(\\d*)").find(id)?.groupValues?.getOrNull(1)
-            ?: id).toIntOrNull() ?: return null
+            ?: id).toIntOrNull() ?: throw ErrorLoadingException("Invalid internalId")
         val season = getSeason(internalId).data.Media
 
         return SyncAPI.SyncResult(
             season.id.toString(),
             nextAiring = season.nextAiringEpisode?.let {
-                SyncAPI.SyncNextAiring(
+                NextAiring(
                     it.episode ?: return@let null,
                     (it.timeUntilAiring ?: return@let null) + unixTime
                 )
@@ -143,6 +142,10 @@ class AniListApi(index: Int) : AccountManager(index), SyncAPI {
                     getUrlFromId(recMedia.id),
                     recMedia.coverImage?.large ?: recMedia.coverImage?.medium
                 )
+            },
+            trailers = when (season.trailer?.site?.lowercase()?.trim()) {
+                "youtube" -> listOf("https://www.youtube.com/watch?v=${season.trailer.id}")
+                else -> null
             }
             //TODO REST
         )
@@ -171,9 +174,6 @@ class AniListApi(index: Int) : AccountManager(index), SyncAPI {
     }
 
     companion object {
-        private val mapper = JsonMapper.builder().addModule(KotlinModule())
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build()!!
-
         private val aniListStatusString =
             arrayOf("CURRENT", "COMPLETED", "PAUSED", "DROPPED", "PLANNING", "REPEATING")
 
@@ -486,7 +486,7 @@ class AniListApi(index: Int) : AccountManager(index), SyncAPI {
             }"""
 
         val data = postApi(q, true)
-        val d = mapper.readValue<GetDataRoot>(data ?: return null)
+        val d = parseJson<GetDataRoot>(data ?: return null)
 
         val main = d.data?.Media
         if (main?.mediaListEntry != null) {
@@ -747,7 +747,7 @@ class AniListApi(index: Int) : AccountManager(index), SyncAPI {
 				}"""
         val data = postApi(q)
         if (data.isNullOrBlank()) return null
-        val userData = mapper.readValue<AniListRoot>(data)
+        val userData = parseJson<AniListRoot>(data)
         val u = userData.data?.Viewer
         val user = AniListUser(
             u?.id,

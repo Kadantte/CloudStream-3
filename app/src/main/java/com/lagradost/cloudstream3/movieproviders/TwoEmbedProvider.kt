@@ -2,8 +2,11 @@ package com.lagradost.cloudstream3.movieproviders
 
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
+import com.lagradost.cloudstream3.SubtitleFile
+import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.apmap
+import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.metaproviders.TmdbLink
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.lagradost.cloudstream3.movieproviders.SflixProvider.Companion.extractRabbitStream
@@ -15,7 +18,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 class TwoEmbedProvider : TmdbProvider() {
     override val apiName = "2Embed"
     override var name = "2Embed"
-    override var mainUrl = "https://www.2embed.ru"
+    override var mainUrl = "https://www.2embed.to"
     override val useMetaLoadResponse = true
     override val instantLinkLoading = false
     override val supportedTypes = setOf(
@@ -61,9 +64,9 @@ class TwoEmbedProvider : TmdbProvider() {
             val mappedservers = parseJson<EmbedJson>(ajax)
             val iframeLink = mappedservers.link
             if (iframeLink.contains("rabbitstream")) {
-                extractRabbitStream(iframeLink, subtitleCallback, callback, "https://ws10.rabbitstream.net/socket.io/?EIO=4&transport=polling") { it }
+                extractRabbitStream(iframeLink, subtitleCallback, callback, false) { it }
             } else {
-                loadExtractor(iframeLink, embedUrl, callback)
+                loadExtractor(iframeLink, embedUrl, subtitleCallback, callback)
             }
         }
         return true

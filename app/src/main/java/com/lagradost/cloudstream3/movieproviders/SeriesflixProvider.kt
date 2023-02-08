@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 class SeriesflixProvider : MainAPI() {
     override var mainUrl = "https://seriesflix.video"
     override var name = "Seriesflix"
-    override val lang = "es"
+    override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
@@ -18,7 +18,7 @@ class SeriesflixProvider : MainAPI() {
         TvType.TvSeries,
     )
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val items = ArrayList<HomePageList>()
         val urls = listOf(
             Pair("$mainUrl/ver-series-online/", "Series"),
@@ -217,7 +217,7 @@ class SeriesflixProvider : MainAPI() {
                     allowRedirects = false
                 ).okhttpResponse.headers.values("location").apmap { link ->
                     val url1 = link.replace("#bu", "")
-                    loadExtractor(url1, data, callback)
+                    loadExtractor(url1, data, subtitleCallback, callback)
                 }
             }
         }

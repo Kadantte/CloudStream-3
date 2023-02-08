@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import org.jsoup.nodes.Element
 
 class EgyBestProvider : MainAPI() {
-    override val lang = "ar"
+    override var lang = "ar"
     override var mainUrl = "https://www.egy.best"
     override var name = "EgyBest"
     override val usesWebView = false
@@ -40,7 +41,7 @@ class EgyBestProvider : MainAPI() {
         )
     }
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         // url, title
         val doc = app.get(mainUrl).document
         val pages = arrayListOf<HomePageList>()
@@ -78,7 +79,8 @@ class EgyBestProvider : MainAPI() {
         val posterUrl = doc.select("div.movie_img a img")?.attr("src")
         val year = doc.select("div.movie_title h1 a")?.text()?.toIntOrNull()
         val title = doc.select("div.movie_title h1 span").text()
-
+        val youtubeTrailer = doc.select("div.play")?.attr("url")
+        
         val synopsis = doc.select("div.mbox").firstOrNull {
             it.text().contains("القصة")
         }?.text()?.replace("القصة ", "")
@@ -112,6 +114,7 @@ class EgyBestProvider : MainAPI() {
                 this.plot = synopsis
                 this.tags = tags
                 this.actors = actors
+                addTrailer(youtubeTrailer)
             }
         } else {
             val episodes = ArrayList<Episode>()
@@ -153,6 +156,7 @@ class EgyBestProvider : MainAPI() {
                 this.year = year
                 this.plot = synopsis
                 this.actors = actors
+                addTrailer(youtubeTrailer)
             }
         }
     }
@@ -160,7 +164,6 @@ class EgyBestProvider : MainAPI() {
         @JsonProperty("quality") val quality: Int?,
         @JsonProperty("link") val link: String
     )
-
 
     override suspend fun loadLinks(
         data: String,
@@ -210,6 +213,8 @@ class EgyBestProvider : MainAPI() {
         return true*/
 
         val requestJSON = app.get("https://api.zr5.repl.co/egybest?url=$data").text
+        // To solve this you need to send a verify request which is pretty hidden, see
+        // https://vear.egybest.deals/tvc.php?verify=.......
         val jsonArray = parseJson<List<Sources>>(requestJSON)
         for (i in jsonArray) {
             val quality = i.quality
@@ -221,7 +226,9 @@ class EgyBestProvider : MainAPI() {
                     link,
                     this.mainUrl,
                     quality!!,
-                    true
+                    true,
+                    // Does not work without these headers!
+                    headers = mapOf("range" to "bytes=0-"),
                 )
             )
         }

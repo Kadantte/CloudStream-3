@@ -24,7 +24,7 @@ class MonoschinosProvider : MainAPI() {
 
     override var mainUrl = "https://monoschinos2.com"
     override var name = "Monoschinos"
-    override val lang = "es"
+    override var lang = "es"
     override val hasMainPage = true
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
@@ -34,7 +34,7 @@ class MonoschinosProvider : MainAPI() {
         TvType.Anime,
     )
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val urls = listOf(
             Pair("$mainUrl/emision", "En emisión"),
             Pair(
@@ -50,12 +50,12 @@ class MonoschinosProvider : MainAPI() {
             HomePageList(
                 "Capítulos actualizados",
                 app.get(mainUrl, timeout = 120).document.select(".col-6").map {
-                    val title = it.selectFirst("p.animetitles")!!.text()
+                    val title = it.selectFirst("p.animetitles")?.text() ?: it.selectFirst(".animetitles")?.text() ?: ""
                     val poster = it.selectFirst(".animeimghv")!!.attr("data-src")
                     val epRegex = Regex("episodio-(\\d+)")
                     val url = it.selectFirst("a")?.attr("href")!!.replace("ver/", "anime/")
                         .replace(epRegex, "sub-espanol")
-                    val epNum = it.selectFirst(".positioning h5")?.text()?.toIntOrNull()
+                    val epNum = (it.selectFirst(".positioning h5")?.text() ?: it.selectFirst("div.positioning p")?.text())?.toIntOrNull()
                     newAnimeSearchResponse(title, url) {
                         this.posterUrl = fixUrl(poster)
                         addDubStatus(getDubStatus(title), epNum)
@@ -148,7 +148,7 @@ class MonoschinosProvider : MainAPI() {
                     callback.invoke(link)
                 }
             } else {
-                loadExtractor(url, mainUrl, callback)
+                loadExtractor(url, mainUrl, subtitleCallback, callback)
             }
         }
         return true

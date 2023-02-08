@@ -2,10 +2,10 @@ package com.lagradost.cloudstream3.utils
 
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.lagradost.cloudstream3.animeproviders.AniflixProvider
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.mapper
 import com.lagradost.cloudstream3.mvvm.logError
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import java.util.concurrent.TimeUnit
 
 object SyncUtil {
@@ -61,7 +61,7 @@ object SyncUtil {
             val url =
                 "https://raw.githubusercontent.com/MALSync/MAL-Sync-Backup/master/data/pages/$site/$slug.json"
             val response = app.get(url, cacheTime = 1, cacheUnit = TimeUnit.DAYS).text
-            val mapped = mapper.readValue<MalSyncPage?>(response)
+            val mapped = parseJson<MalSyncPage?>(response)
 
             val overrideMal = mapped?.malId ?: mapped?.Mal?.id ?: mapped?.Anilist?.malId
             val overrideAnilist = mapped?.aniId ?: mapped?.Anilist?.id
@@ -81,7 +81,11 @@ object SyncUtil {
             "https://raw.githubusercontent.com/MALSync/MAL-Sync-Backup/master/data/$type/anime/$id.json"
         val response = app.get(url, cacheTime = 1, cacheUnit = TimeUnit.DAYS).parsed<SyncPage>()
         val pages = response.pages ?: return emptyList()
-        return pages.gogoanime.values.union(pages.nineanime.values).union(pages.twistmoe.values).mapNotNull { it.url }
+        val current = pages.gogoanime.values.union(pages.nineanime.values).union(pages.twistmoe.values).mapNotNull { it.url }.toMutableList()
+        if(type == "anilist") { // TODO MAKE BETTER
+            current.add("${AniflixProvider().mainUrl}/anime/$id")
+        }
+        return current
     }
 
     data class SyncPage(

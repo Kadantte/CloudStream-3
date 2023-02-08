@@ -1,18 +1,17 @@
 package com.lagradost.cloudstream3.animeproviders
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.network.DdosGuardKiller
+import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-import java.util.*
 
 class KuramanimeProvider : MainAPI() {
     override var mainUrl = "https://kuramanime.com"
     override var name = "Kuramanime"
     override val hasQuickSearch = false
     override val hasMainPage = true
-    override val lang = "id"
+    override var lang = "id"
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
@@ -37,36 +36,24 @@ class KuramanimeProvider : MainAPI() {
         }
     }
 
-    override suspend fun getMainPage(): HomePageResponse {
-        val document = app.get(mainUrl).document
+    override val mainPage = mainPageOf(
+        "$mainUrl/anime/ongoing?order_by=updated&page=" to "Sedang Tayang",
+        "$mainUrl/anime/finished?order_by=updated&page=" to "Selesai Tayang",
+        "$mainUrl/properties/season/summer-2022?order_by=most_viewed&page=" to "Dilihat Terbanyak Musim Ini",
+        "$mainUrl/anime/movie?order_by=updated&page=" to "Film Layar Lebar",
+    )
 
-        val homePageList = ArrayList<HomePageList>()
+    override suspend fun getMainPage(
+        page: Int,
+        request: MainPageRequest
+    ): HomePageResponse {
+        val document = app.get(request.data + page).document
 
-        document.select("div[class*=__product]").forEach { block ->
-            val header = block.select(".section-title > h4").text()
-            val animes = block.select("div.col-lg-4.col-md-6.col-sm-6").mapNotNull {
-                it.toSearchResult()
-            }
-            if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
+        val home = document.select("div.col-lg-4.col-md-6.col-sm-6").mapNotNull {
+            it.toSearchResult()
         }
 
-        document.select("#topAnimesSection").forEach { block ->
-            val header = block.previousElementSibling()!!.select("h5").text().trim()
-            val animes = block.select("a").mapNotNull {
-                it.toSearchResultView()
-            }
-            if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
-        }
-
-        document.select("#latestCommentSection").forEach { block ->
-            val header = block.previousElementSibling()!!.select("h5").text().trim()
-            val animes = block.select(".product__sidebar__comment__item").mapNotNull {
-                it.toSearchResultComment()
-            }
-            if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
-        }
-
-        return HomePageResponse(homePageList)
+        return newHomePageResponse(request.name, home)
     }
 
     private fun getProperAnimeLink(uri: String): String {
@@ -77,41 +64,17 @@ class KuramanimeProvider : MainAPI() {
         }
     }
 
-    private fun Element.toSearchResult(): SearchResponse {
+    private fun Element.toSearchResult(): AnimeSearchResponse? {
         val href = getProperAnimeLink(fixUrl(this.selectFirst("a")!!.attr("href")))
-        val title = this.select(".product__item__text > h5 > a").text()
-        val posterUrl = fixUrl(this.select(".product__item__pic.set-bg").attr("data-setbg"))
-        val type = getType(this.selectFirst(".product__item__text > ul > li")!!.text())
-
-        return newAnimeSearchResponse(title, href, type) {
-            this.posterUrl = posterUrl
-            addDubStatus(dubExist = false, subExist = true)
-        }
-
-    }
-
-    private fun Element.toSearchResultView(): SearchResponse {
-        val href = getProperAnimeLink(fixUrl(this.attr("href")))
-        val title = this.selectFirst("h5")!!.text().trim()
-        val posterUrl =
-            fixUrl(this.select(".product__sidebar__view__item.set-bg").attr("data-setbg"))
+        val title = this.selectFirst("h5 a")?.text() ?: return null
+        val posterUrl = fixUrl(this.select("div.product__item__pic.set-bg").attr("data-setbg"))
+        val episode = Regex("([0-9*])\\s?/").find(
+            this.select("div.ep span").text()
+        )?.groupValues?.getOrNull(1)?.toIntOrNull()
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
-            addDubStatus(dubExist = false, subExist = true)
-        }
-
-    }
-
-    private fun Element.toSearchResultComment(): SearchResponse {
-        val href = getProperAnimeLink(fixUrl(this.selectFirst("a")!!.attr("href")))
-        val title = this.selectFirst("h5")!!.text()
-        val posterUrl = fixUrl(this.select("img").attr("src"))
-        val type = getType(this.selectFirst("ul > li")!!.text())
-
-        return newAnimeSearchResponse(title, href, type) {
-            this.posterUrl = posterUrl
-            addDubStatus(dubExist = false, subExist = true)
+            addSub(episode)
         }
 
     }
@@ -190,19 +153,21 @@ class KuramanimeProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val servers = app.get(data, interceptor = DdosGuardKiller(true)).document
+        val servers = app.get(data).document
         servers.select("video#player > source").map {
-            val url = it.attr("src")
-            val quality = it.attr("size").toInt()
-            callback.invoke(
-                ExtractorLink(
-                    name,
-                    name,
-                    url,
-                    referer = "$mainUrl/",
-                    quality = quality
+            suspendSafeApiCall {
+                val url = it.attr("src")
+                val quality = it.attr("size").toInt()
+                callback.invoke(
+                    ExtractorLink(
+                        name,
+                        name,
+                        url,
+                        referer = "$mainUrl/",
+                        quality = quality
+                    )
                 )
-            )
+            }
         }
 
         return true

@@ -3,7 +3,7 @@ package com.lagradost.cloudstream3.metaproviders
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.syncproviders.OAuth2API
+import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.aniListApi
 import com.lagradost.cloudstream3.syncproviders.SyncAPI
 import com.lagradost.cloudstream3.syncproviders.providers.AniListApi
 import com.lagradost.cloudstream3.syncproviders.providers.MALApi
@@ -12,10 +12,10 @@ import com.lagradost.cloudstream3.utils.SyncUtil
 // wont be implemented
 class MultiAnimeProvider : MainAPI() {
     override var name = "MultiAnime"
-    override val lang = "en"
+    override var lang = "en"
     override val usesWebView = true
     override val supportedTypes = setOf(TvType.Anime)
-    private val syncApi: SyncAPI = OAuth2API.aniListApi
+    private val syncApi: SyncAPI = aniListApi
 
     private val syncUtilType by lazy {
         when (syncApi) {
@@ -61,7 +61,7 @@ class MultiAnimeProvider : MainAPI() {
                 plot = res.synopsis
                 tags = res.genres
                 rating = res.publicScore
-                addTrailer(res.trailerUrl)
+                addTrailer(res.trailers)
                 addAniListId(res.id.toIntOrNull())
                 recommendations = res.recommendations
             }
